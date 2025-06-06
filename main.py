@@ -3,13 +3,10 @@ import os
 import subprocess
 import time
 import threading
+from settings import TOKEN, CHAT_ID, CHECK_INTERVAL
 
 # === Настройки ===
-TOKEN = "7783555824:AAH2uIc6EnHtz0el2bqqnKBnUI9ttnX_UgQ"
-CHAT_ID = 5257065430  # Просто твой Telegram ID
 FILE_NAME = "containers.txt"
-CHECK_INTERVAL = 10
-
 bot = telebot.TeleBot(TOKEN)
 
 # === Утилиты отправки ===
