@@ -4,13 +4,27 @@ import subprocess
 import time
 import threading
 
-
 # === Настройки ===
 TOKEN = "7783555824:AAH2uIc6EnHtz0el2bqqnKBnUI9ttnX_UgQ"
+CHAT_ID = 5257065430  # Просто твой Telegram ID
 FILE_NAME = "containers.txt"
 CHECK_INTERVAL = 10
 
 bot = telebot.TeleBot(TOKEN)
+
+# === Утилиты отправки ===
+def send_telegram_message(text):
+    try:
+        bot.send_message(CHAT_ID, text, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Ошибка отправки: {e}")
+
+def send_telegram_file(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            bot.send_document(CHAT_ID, f)
+    except Exception as e:
+        print(f"Ошибка отправки файла: {e}")
 
 # === Работа с файлами ===
 def save_container(name):
@@ -70,15 +84,13 @@ def handle_add(message):
         bot.send_message(message.chat.id, "Пустое название не добавлено.")
 
 # === Мониторинг ===
-def send_telegram_file(file_path):
-    with open(file_path, "rb") as f:
-        bot.send_document(bot.admins[0], f)
-
 def is_container_running(name):
     try:
-        result = subprocess.run([
-            "docker", "inspect", "-f", "{{.State.Running}}", name
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Running}}", name],
+            capture_output=True,
+            text=True
+        )
         return result.stdout.strip() == "true"
     except Exception:
         return False
@@ -86,7 +98,12 @@ def is_container_running(name):
 def get_container_logs(name, file_path):
     try:
         with open(file_path, "w", encoding="utf-8") as f:
-            subprocess.run(["docker", "logs", name], stdout=f, stderr=subprocess.STDOUT, text=True)
+            subprocess.run(
+                ["docker", "logs", name],
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
         return True
     except Exception:
         return False
@@ -102,20 +119,16 @@ def monitor_containers():
                 log_path = f"logs_{name}.txt"
                 success = get_container_logs(name, log_path)
                 if success:
-                    bot.send_message(bot.admins[0], f"\ud83d\udea8 Контейнер *{name}* упал! Отправляю логи:", parse_mode="Markdown")
+                    send_telegram_message(f"🚨 Контейнер *{name}* упал! Отправляю логи:")
                     send_telegram_file(log_path)
                     os.remove(log_path)
                 else:
-                    bot.send_message(bot.admins[0], f"\ud83d\udea8 Контейнер *{name}* упал, но не удалось получить логи.", parse_mode="Markdown")
+                    send_telegram_message(f"🚨 Контейнер *{name}* упал, но не удалось получить логи.")
             previous_states[name] = running
         time.sleep(CHECK_INTERVAL)
 
+# === Старт ===
 if __name__ == "__main__":
-    @bot.message_handler(commands=['admin'])
-    def set_admin(message):
-        bot.admins = [message.chat.id]
-        bot.send_message(message.chat.id, "Вы назначены как админ для получения логов.")
-
     monitor_thread = threading.Thread(target=monitor_containers, daemon=True)
     monitor_thread.start()
     bot.polling(none_stop=True)
