@@ -47,6 +47,8 @@ def handle_start(message):
     markup.add(telebot.types.InlineKeyboardButton("Добавить", callback_data="add"))
     markup.add(telebot.types.InlineKeyboardButton("Удалить", callback_data="delete"))
     markup.add(telebot.types.InlineKeyboardButton("Показать", callback_data="list"))
+    markup.add(telebot.types.InlineKeyboardButton("Остановить", callback_data="stop"))
+    markup.add(telebot.types.InlineKeyboardButton("Запустить", callback_data="start"))
     bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -72,6 +74,15 @@ def callback_handler(call):
         delete_container(name)
         bot.send_message(call.message.chat.id, f"Контейнер '{name}' удалён.")
 
+    elif call.data == "stop":
+        bot.send_message(call.message.chat.id, "Введите ID или имя контейнера для остановки:")
+        bot.register_next_step_handler(call.message, handle_stop)
+
+    elif call.data == "start":
+        bot.send_message(call.message.chat.id, "Введите ID или имя контейнера для запуска:")
+        bot.register_next_step_handler(call.message, handle_start_container)
+
+
 def handle_add(message):
     name = message.text.strip()
     if name:
@@ -79,6 +90,28 @@ def handle_add(message):
         bot.send_message(message.chat.id, f"Контейнер '{name}' добавлен.")
     else:
         bot.send_message(message.chat.id, "Пустое название не добавлено.")
+
+
+
+def handle_stop(message):
+    container_id = message.text.strip()
+    try:
+        subprocess.run(["docker", "stop", container_id], check=True)
+        bot.send_message(message.chat.id, f"✅ Контейнер `{container_id}` остановлен.", parse_mode="Markdown")
+    except subprocess.CalledProcessError:
+        bot.send_message(message.chat.id, f"❌ Не удалось остановить контейнер `{container_id}`.", parse_mode="Markdown")
+
+def handle_start_container(message):
+    container_id = message.text.strip()
+    try:
+        subprocess.run(["docker", "start", container_id], check=True)
+        bot.send_message(message.chat.id, f"✅ Контейнер `{container_id}` запущен.", parse_mode="Markdown")
+    except subprocess.CalledProcessError:
+        bot.send_message(message.chat.id, f"❌ Не удалось запустить контейнер `{container_id}`.", parse_mode="Markdown")
+
+
+
+
 
 # === Мониторинг ===
 def is_container_running(name):
