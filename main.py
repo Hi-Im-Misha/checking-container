@@ -157,8 +157,15 @@ def monitor_containers():
             previous_states[name] = running
         time.sleep(CHECK_INTERVAL)
 
-# === Старт ===
 if __name__ == "__main__":
     monitor_thread = threading.Thread(target=monitor_containers, daemon=True)
     monitor_thread.start()
-    bot.polling(none_stop=True)
+
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception as e:
+            with open("log.txt", "a", encoding="utf-8") as f:
+                f.write(f"[Ошибка polling] {e}\n")
+            time.sleep(15)
+
